@@ -1,0 +1,88 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression  
+from sklearn.metrics import accuracy_score , confusion_matrix
+from sklearn.metrics import classification_report
+import nltk
+from nltk.corpus import stopwords
+from collections import Counter
+df = pd.read_csv("/kaggle/input/sms-spam-collection-dataset/spam.csv", encoding="ISO-8859-1")
+
+# Display the first few rows of the dataset
+df.head()
+column_to_remove = ['Unnamed: 2','Unnamed: 3','Unnamed: 4']
+df = df.drop(column_to_remove, axis=1)
+df.shape
+df.info()
+df.describe()
+df[df.duplicated()]
+df = df.drop_duplicates()
+df
+df["v1"].value_counts()
+sns.countplot(data=df, x='v1')
+plt.xlabel('v1')
+plt.ylabel('count')
+plt.title('Count Plot')
+plt.show()
+df.loc[df["v1"] == "spam", "Category"] = 0
+df.loc[df["v1"] == "ham", "Category"] = 1
+
+df.head()
+X=df['v2']
+y=df['Category']
+X
+y
+X_train,X_test,y_train,y_test = train_test_split(X,y,test_size=0.2,random_state=2)
+feature_extraction = TfidfVectorizer(min_df=1, stop_words='english',lowercase=True)
+X_train_features = feature_extraction.fit_transform(X_train)
+X_test_features = feature_extraction.transform(X_test)
+
+y_train = y_train.astype(int)
+y_test = y_test.astype(int)
+model = LogisticRegression()
+model.fit(X_train_features,y_train)
+prediction_on_training_data = model.predict(X_train_features)
+accuracy_on_training_data = accuracy_score(y_train, prediction_on_training_data)
+
+prediction_on_test_data = model.predict(X_test_features)
+accuracy_on_test_data = accuracy_score(y_test, prediction_on_test_data)
+
+# Print accuracy
+print('Accuracy on training data: {} %'.format(accuracy_on_training_data * 100))
+print('Accuracy on test data: {} %'.format(accuracy_on_test_data * 100))
+conf_matrix = confusion_matrix(y_test, prediction_on_test_data)
+plt.figure(figsize=(8, 6))
+sns.heatmap(conf_matrix, annot=True, fmt="d", cmap="Greens", cbar=False,
+            xticklabels=['Spam', 'Ham'], yticklabels=['Spam', 'Ham'])
+plt.xlabel('Predicted')
+plt.ylabel('Actual')
+plt.title('Confusion Matrix')
+plt.show()
+classification_rep = classification_report(y_test, prediction_on_test_data,target_names=['Spam', 'Ham'])
+print("Classification Report:")
+print(classification_rep)
+TP = conf_matrix[1, 1]
+TN = conf_matrix[0, 0]
+FP = conf_matrix[0, 1]
+FN = conf_matrix[1, 0]
+
+accuracy = (TP + TN) / (TP + TN + FP + FN)
+precision = TP / (TP + FP)
+recall = TP / (TP + FN)
+specificity = TN / (TN + FP)
+
+print("Accuracy : ",accuracy)
+print("Precision : ",precision)
+print("Recall : ",recall)
+print("Specificity : ",specificity)
+input_your_mail ="Dear John, I hope this email finds you well. Attached is the report you requested for our upcoming meeting. Please review it at your convenience"
+input_data_features = feature_extraction.transform([input_your_mail])
+prediction = model.predict(input_data_features)
+if prediction[0] == 1:
+    print("Ham Mail")
+else:
+    print("Spam Mail")
